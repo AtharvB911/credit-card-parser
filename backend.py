@@ -91,9 +91,9 @@ def detect_bank(text):
     text = text.lower()
     if re.search(r"u\.?s\.?\s*bank", text): return "USBANK"
     if "walmart" in text: return "WALMART"
-    if "hdfc bank" in text: return "HDFC"
-    if "sbi card" in text or "state bank" in text: return "SBI"
-    if "icici bank" in text: return "ICICI"
+    if "hdfc" in text: return "HDFC"
+    if "sbi" in text or "state bank" in text: return "SBI"
+    if "icici" in text: return "ICICI"
     return None
 
 def extract_data(text, bank_name):
