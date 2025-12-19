@@ -3,6 +3,7 @@ import re
 import pdfplumber
 import pytesseract
 from pdf2image import convert_from_path
+from pypdf import PdfReader
 import os
 
 
@@ -53,38 +54,35 @@ BANK_PATTERNS = {
 }
 
 def extract_text_smart(pdf_path):
-    """
-    1. Tries to read text directly (Fast).
-    2. If text is missing/scrambled, converts PDF to Image -> Runs OCR (Slow but robust).
-    """
     text = ""
     
     try:
         with pdfplumber.open(pdf_path) as pdf:
-            first_page = pdf.pages[0]
-            
-            # Attempt 1: Standard extraction
-            text = first_page.extract_text() or ""
-            
-            # Attempt 2: If standard failed, try 'layout' mode (Helps with FPDF/Table layouts)
-            if len(text.strip()) < 50:
-                print("⚠️ Standard extraction weak. Retrying with layout preservation...")
-                text = first_page.extract_text(layout=True, x_tolerance=3, y_tolerance=3) or ""
-                
+            if len(pdf.pages) > 0:
+                text = pdf.pages[0].extract_text() or ""
     except Exception as e:
-        print(f"Direct extraction error: {e}")
+        print(f"pdfplumber failed: {e}")
 
     if len(text.strip()) < 50:
-        print("⚠️ Text not found or is an image. Starting OCR (this may take a moment)...")
+        print("⚠️ pdfplumber yielded low text. Switching to pypdf (better for generated files)...")
         try:
+            reader = PdfReader(pdf_path)
+            if len(reader.pages) > 0:
+                text = reader.pages[0].extract_text() or ""
+        except Exception as e:
+            print(f"pypdf failed: {e}")
+
+
+    if len(text.strip()) < 50:
+        print("⚠️ Text still missing. File is likely an image. Starting OCR...")
+        try:
+            # Convert PDF Page to Image
             images = convert_from_path(pdf_path, first_page=1, last_page=1, poppler_path=POPPLER_PATH)
-            
             if images:
-                # Run OCR on the image
                 text = pytesseract.image_to_string(images[0])
                 print("✅ OCR Complete.")
         except Exception as e:
-            return f"OCR Failed. Check Poppler/Tesseract paths. Error: {e}"
+            return f"OCR Failed. Check paths. Error: {e}"
 
     return text
 

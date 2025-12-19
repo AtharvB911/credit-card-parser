@@ -5,3 +5,4 @@ fpdf
 pytesseract
 pdf2image
 Pillow
+pypdf
